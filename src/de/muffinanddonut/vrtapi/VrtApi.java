@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
 /**
  *   This class represents the Web API used by the VRT-App
@@ -24,6 +25,11 @@ public class VrtApi {
      * The API Endpoint used for a Coord-Request
      */
     private static final String COORD_REQUEST_ENDPOINT = "XML_COORD_REQUEST";
+
+    /**
+     * The API Endpoint user for a DM Request
+     */
+    private static final String DM_REQUEST_ENDPOINT = "XML_DM_REQUEST";
 
     /**
      * This Method queries the VRT API for 5 closest Bus Stops in a given radius
@@ -43,9 +49,11 @@ public class VrtApi {
         JAXBContext jaxbContext = JAXBContext.newInstance(CoordRequestResponse.class);
         Unmarshaller jaxUnmarshaller = jaxbContext.createUnmarshaller();
         CoordRequestResponse response = (CoordRequestResponse) jaxUnmarshaller.unmarshal(responseReader);
-
+        responseReader.close();
         return response;
     }
+
+
 
     /**
      * This Method queries the VRT API for 5 closest Bus Stops in a radius of 1 kilometer
@@ -59,6 +67,22 @@ public class VrtApi {
         return queryBusStopsByCoordinates(longitude, latitude, 1000);
     }
 
+    public static DmRequestResponse queryDeparturesByBusStop(String busStopId) throws IOException, JAXBException {
+        int limit =10;
+        String query = String.format("mode=direct&coordOutputFormat=wgs84&mergeDep=1&useAllStops=1&maxTimeLoop=1&" +
+                "canChangeMOT=0&useRealtime=1&locationServerActive=1&depType=stopEvents&includeCompleteStopSeq=1&" +
+                "name_dm=%s&type_dm=stop&changeSpeed=normal&deleteAssignedStops=1&lineRestriction=400&excludedMeans=checkbox&" +
+                "imparedOptionsActive=1&ptOptionsActive=1&trITMOTvalue100=10&limit=%d&useProxFootSearch=0&itOptionsActive=1&routeType=LEASTTIME",
+        busStopId, limit);
+
+        BufferedReader responseReader = queryUrl(query, DM_REQUEST_ENDPOINT);
+        JAXBContext jaxbContext = JAXBContext.newInstance(DmRequestResponse.class);
+
+        Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+        responseReader.close();
+        return (DmRequestResponse) unmarshaller.unmarshal(responseReader);
+    }
+
     /**
      * This Method sends a query to the VRT API
      * @param query the query string to be sent
@@ -67,7 +91,8 @@ public class VrtApi {
      * @throws IOException Error in the connection to the API
      */
     private static BufferedReader queryUrl(String query, String endpoint) throws IOException {
-        URLConnection connection = new URL(baseUrl+endpoint+"?"+query).openConnection();
+        String url = baseUrl+endpoint+"?"+query;
+        URLConnection connection = new URL(url).openConnection();
         connection.setRequestProperty("Accept-Charset", StandardCharsets.UTF_8.name());
 
         return new BufferedReader(new InputStreamReader(connection.getInputStream()));
