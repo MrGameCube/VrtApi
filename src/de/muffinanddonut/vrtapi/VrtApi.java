@@ -9,7 +9,6 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
-import java.util.stream.Collectors;
 
 /**
  *   This class represents the Web API used by the VRT-App
@@ -67,6 +66,13 @@ public class VrtApi {
         return queryBusStopsByCoordinates(longitude, latitude, 1000);
     }
 
+    /**
+     * This Method queries the VRT API for the next 10 departures at a given bus stop.
+     * @param busStopId The id of the bus stop
+     * @return The next 10 departures at the stop not {@code null}
+     * @throws IOException Error in the connection to the API
+     * @throws JAXBException Error in parsing of the response
+     */
     public static DmRequestResponse queryDeparturesByBusStop(String busStopId) throws IOException, JAXBException {
         int limit =10;
         String query = String.format("mode=direct&coordOutputFormat=wgs84&mergeDep=1&useAllStops=1&maxTimeLoop=1&" +
@@ -79,8 +85,9 @@ public class VrtApi {
         JAXBContext jaxbContext = JAXBContext.newInstance(DmRequestResponse.class);
 
         Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+        DmRequestResponse dmRequestResponse = (DmRequestResponse) unmarshaller.unmarshal(responseReader);
         responseReader.close();
-        return (DmRequestResponse) unmarshaller.unmarshal(responseReader);
+        return dmRequestResponse;
     }
 
     /**
